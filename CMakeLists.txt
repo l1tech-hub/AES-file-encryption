@@ -5,31 +5,16 @@ project(AES-file-encryption)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(GTest REQUIRED)
-include(GoogleTest)
 
 
-# LIBRARIES #
-
-add_library(aes STATIC AES.c)
+add_subdirectory(src)
 
 
 
-# TESTS #
+option(BUILD_TESTS "Build tests" ON)
 
-add_executable(aes_tests
-    AES_test.cpp
-)
-target_link_libraries(aes_tests
-    PRIVATE 
-        aes 
-        GTest::GTest
-        GTest::Main
-)
-
-gtest_discover_tests(aes_tests)
-
-
-
-
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
