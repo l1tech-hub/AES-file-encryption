@@ -47,104 +47,95 @@ const uint8_t rcon[11] = {
 };
 
 
-uint8_t** AllocUint8_tArray2(unsigned x, unsigned y) {
+uint32_t* AllocWords(unsigned count) {
 
-    uint8_t** array;
+    uint32_t* array;
 
-    if (!(array = (uint8_t**)malloc(y * sizeof(uint8_t*)))) {
+    if (!(array = (uint32_t*)calloc(count, sizeof(uint32_t)))) {
         fprintf(stderr, "\n\033[0;31mНедостаточно памяти для выполнения программы!\033[0m\n");
         exit(1);
-    }
-    for (uint64_t i = 0; i < y; i++) {
-        if (!(array[i] = (uint8_t*)calloc(x, sizeof(uint8_t)))) {
-            fprintf(stderr, "\n\033[0;31mНедостаточно памяти для выполнения программы!\033[0m\n");
-            exit(1);
-        }
     }
     return array;
 }
 
-void FreeUint8_tArray2(uint8_t** array, unsigned y) {
+void FreeWords(uint32_t* array) {
 
-    for (unsigned i = 0; i < y; i++) {
-        free(array[i]);
-    }
     free(array);
 }
 
 
 /* ОПЕРАЦИИ АЛГОРИТМА AES */
 
-uint8_t** SubBytes(uint8_t** state) {
+uint32_t* SubBytes(uint32_t* state) {
 
     for (uint8_t i = 0; i < BLOCK_DIM; i++) {
         for (uint8_t j = 0; j < BLOCK_DIM; j++) {
-            state[i][j] = sbox[state[i][j]];
+            BYTE(state[i], j) = sbox[BYTE(state[i], j)];
         }
     }
     return state;
 }
 
-uint8_t** InvSubBytes(uint8_t** state) {
+uint32_t* InvSubBytes(uint32_t* state) {
 
     for (uint8_t i = 0; i < BLOCK_DIM; i++) {
         for (uint8_t j = 0; j < BLOCK_DIM; j++) {
-            state[i][j] = rsbox[state[i][j]];
+            BYTE(state[i], j) = rsbox[BYTE(state[i], j)];
         }
     }
     return state;
 }
 
-uint8_t** ShiftRows(uint8_t** state) {
+uint32_t* ShiftRows(uint32_t* state) {
 
     uint8_t temp;
   
-    temp = state[0][1];
-    state[0][1] = state[1][1];
-    state[1][1] = state[2][1];
-    state[2][1] = state[3][1];
-    state[3][1] = temp;
+    temp = BYTE(state[0], 1);
+    BYTE(state[0], 1) = BYTE(state[1], 1);
+    BYTE(state[1], 1) = BYTE(state[2], 1);
+    BYTE(state[2], 1) = BYTE(state[3], 1);
+    BYTE(state[3], 1) = temp;
 
-    temp = state[0][2];
-    state[0][2] = state[2][2];
-    state[2][2] = temp;
+    temp = BYTE(state[0], 2);
+    BYTE(state[0], 2) = BYTE(state[2], 2);
+    BYTE(state[2], 2) = temp;
 
-    temp = state[1][2];
-    state[1][2] = state[3][2];
-    state[3][2] = temp;
+    temp = BYTE(state[1], 2);
+    BYTE(state[1], 2) = BYTE(state[3], 2);
+    BYTE(state[3], 2) = temp;
 
-    temp = state[0][3];
-    *(*(state  + 0) + 3) = state[2][3];
-    state[2][3] = state[2][3];
-    state[2][3] = state[1][3];
-    state[1][3] = temp;
+    temp = BYTE(state[3], 3);
+    BYTE(state[3], 3) = BYTE(state[2], 3);
+    BYTE(state[2], 3) = BYTE(state[1], 3);
+    BYTE(state[1], 3) = BYTE(state[0], 3);
+    BYTE(state[0], 3) = temp;
     
     return state;
 }
 
-uint8_t** InvShiftRows(uint8_t** state) {
+uint32_t* InvShiftRows(uint32_t* state) {
 
     uint8_t temp;
 
-    temp = state[3][1];
-    state[3][1] = state[2][1];
-    state[2][1] = state[1][1];
-    state[1][1] = state[0][1];
-    state[0][1] = temp;
+    temp = BYTE(state[3], 1);
+    BYTE(state[3], 1) = BYTE(state[2], 1);
+    BYTE(state[2], 1) = BYTE(state[1], 1);
+    BYTE(state[1], 1) = BYTE(state[0], 1);
+    BYTE(state[0], 1) = temp;
 
-    temp = state[3][2];
-    state[3][2] = state[1][2];
-    state[1][2] = temp;
+    temp = BYTE(state[3], 2);
+    BYTE(state[3], 2) = BYTE(state[1], 2);
+    BYTE(state[1], 2) = temp;
 
-    temp = state[2][2];
-    state[2][2] = state[0][2];
-    state[0][2] = temp;
+    temp = BYTE(state[2], 2);
+    BYTE(state[2], 2) = BYTE(state[0], 2);
+    BYTE(state[0], 2) = temp;
 
-    temp = state[0][3];
-    state[0][3] = state[1][3];
-    state[1][3] = state[2][3];
-    state[2][3] = state[2][3];
-    state[2][3] = temp;
+    temp = BYTE(state[0], 3);
+    BYTE(state[0], 3) = BYTE(state[1], 3);
+    BYTE(state[1], 3) = BYTE(state[2], 3);
+    BYTE(state[2], 3) = BYTE(state[3], 3);
+    BYTE(state[3], 3) = temp;
 
     return state;
 }
@@ -162,61 +153,61 @@ uint8_t Multiply(uint8_t x, uint8_t y) {
         ((y >> 4 & 1) * xtime(xtime(xtime(xtime(x))))));
 }
 
-uint8_t** MixColumns(uint8_t** state) {
+uint32_t* MixColumns(uint32_t* state) {
 
     uint8_t col[4];
     uint8_t colx2[4];
 
     for (uint64_t i = 0; i < BLOCK_DIM; i++) {
         for (uint8_t c = 0; c < BLOCK_DIM; c++) {
-            col[c] = state[i][c];
+            col[c] = BYTE(state[i], c);
             colx2[c] = xtime(col[c]);
         }
-        state[i][0] = colx2[0] ^ col[3] ^ col[2] ^ colx2[1] ^ col[1]; /* 2 * col0 + col3 + col2 + 3 * col1 */
-        state[i][1] = colx2[1] ^ col[0] ^ col[3] ^ colx2[2] ^ col[2]; /* 2 * col1 + col0 + col3 + 3 * col2 */
-        state[i][2] = colx2[2] ^ col[1] ^ col[0] ^ colx2[3] ^ col[3]; /* 2 * col2 + col1 + col0 + 3 * col3 */
-        state[i][3] = colx2[3] ^ col[2] ^ col[1] ^ colx2[0] ^ col[0]; /* 2 * col3 + col2 + col1 + 3 * col0 */
+        BYTE(state[i], 0) = colx2[0] ^ col[3] ^ col[2] ^ colx2[1] ^ col[1]; /* 2 * col0 + col3 + col2 + 3 * col1 */
+        BYTE(state[i], 1) = colx2[1] ^ col[0] ^ col[3] ^ colx2[2] ^ col[2]; /* 2 * col1 + col0 + col3 + 3 * col2 */
+        BYTE(state[i], 2) = colx2[2] ^ col[1] ^ col[0] ^ colx2[3] ^ col[3]; /* 2 * col2 + col1 + col0 + 3 * col3 */
+        BYTE(state[i], 3) = colx2[3] ^ col[2] ^ col[1] ^ colx2[0] ^ col[0]; /* 2 * col3 + col2 + col1 + 3 * col0 */
     }
     return state;
 }
 
-uint8_t** InvMixColumns(uint8_t** state) {
+uint32_t* InvMixColumns(uint32_t* state) {
 
     uint8_t a, b, c, d;
 
     for (uint8_t i = 0; i < BLOCK_DIM; i++) {
-        a = state[i][0];
-        b = state[i][1];
-        c = state[i][2];
-        d = state[i][3];
+        a = BYTE(state[i], 0);
+        b = BYTE(state[i], 1);
+        c = BYTE(state[i], 2);
+        d = BYTE(state[i], 3);
 
-        state[i][0] = Multiply(a, 0x0e) ^ Multiply(b, 0x0b) ^ Multiply(c, 0x0d) ^ Multiply(d, 0x09);
-        state[i][1] = Multiply(a, 0x09) ^ Multiply(b, 0x0e) ^ Multiply(c, 0x0b) ^ Multiply(d, 0x0d);
-        state[i][2] = Multiply(a, 0x0d) ^ Multiply(b, 0x09) ^ Multiply(c, 0x0e) ^ Multiply(d, 0x0b);
-        state[i][3] = Multiply(a, 0x0b) ^ Multiply(b, 0x0d) ^ Multiply(c, 0x09) ^ Multiply(d, 0x0e);
+        BYTE(state[i], 0) = Multiply(a, 0x0e) ^ Multiply(b, 0x0b) ^ Multiply(c, 0x0d) ^ Multiply(d, 0x09);
+        BYTE(state[i], 1) = Multiply(a, 0x09) ^ Multiply(b, 0x0e) ^ Multiply(c, 0x0b) ^ Multiply(d, 0x0d);
+        BYTE(state[i], 2) = Multiply(a, 0x0d) ^ Multiply(b, 0x09) ^ Multiply(c, 0x0e) ^ Multiply(d, 0x0b);
+        BYTE(state[i], 3) = Multiply(a, 0x0b) ^ Multiply(b, 0x0d) ^ Multiply(c, 0x09) ^ Multiply(d, 0x0e);
     }
     return state;
 }
 
-uint8_t** AddRoundKey(uint8_t** state, uint8_t** round_keys, uint8_t round) {
+uint32_t* AddRoundKey(uint32_t* state, uint32_t* round_keys, uint8_t round) {
 
     for (uint8_t i = 0, w = round * WORDS_NUM; i < BLOCK_DIM; i++, w++) {
         for (uint8_t j = 0; j < BLOCK_DIM; j++) {
-            state[i][j] = state[i][j] ^ round_keys[w][j];
+            BYTE(state[i], j) = BYTE(state[i], j) ^ BYTE(round_keys[w], j);
         }
     }
     return state;
 }
 
-uint8_t** KeyExpansion(uint8_t** key) {
+uint32_t* KeyExpansion(uint32_t* key) {
 
-    uint8_t** expanded_key;
+    uint32_t* expanded_key;
 
-    expanded_key = AllocUint8_tArray2(BLOCK_DIM, EXP_WORDS_NUM);
+    expanded_key = AllocWords(EXP_WORDS_NUM);
 
     for (uint8_t i = 0; i < WORDS_NUM; i++) {
         for (uint8_t j = 0; j < BLOCK_DIM; j++) {
-            expanded_key[i][j] = key[i][j];
+            BYTE(expanded_key[i], j) = BYTE(key[i], j);
         }
     }
 
@@ -224,49 +215,53 @@ uint8_t** KeyExpansion(uint8_t** key) {
 
         if (i % WORDS_NUM == 0) {
             for (uint8_t j = 0; j < BLOCK_DIM; j++)
-                expanded_key[i][j] = *(*(expanded_key + i - 1) + j);
+                BYTE(expanded_key[i], j) = BYTE(expanded_key[i - 1], j);
 
-            RotWord(expanded_key[i]);
+            RotWord(&expanded_key[i]);
 
-            SubWord(expanded_key[i], expanded_key[i]);
-            XorWords(*(expanded_key + i - WORDS_NUM), expanded_key[i], expanded_key[i]);
-            uint8_t rcon_word[BLOCK_DIM] = { rcon[i / WORDS_NUM], 0x00, 0x00, 0x00 };
-            XorWords(expanded_key[i], rcon_word, expanded_key[i]);
+            SubWord(&expanded_key[i], &expanded_key[i]);
+            XorWords(&expanded_key[i - WORDS_NUM], &expanded_key[i], &expanded_key[i]);
+            uint32_t rcon_word = 0;
+            BYTE(rcon_word, 0) = rcon[i / WORDS_NUM];
+            XorWords(&expanded_key[i], &rcon_word, &expanded_key[i]);
         }
         else if (WORDS_NUM == 8 && i % WORDS_NUM == 4) {
-            SubWord(*(key + i - 1), expanded_key[i]);
-            XorWords(*(key + i - WORDS_NUM), expanded_key[i], expanded_key[i]);
+            SubWord(&expanded_key[i - 1], &expanded_key[i]);
+            XorWords(&expanded_key[i - WORDS_NUM], &expanded_key[i], &expanded_key[i]);
         }
         else {
-            XorWords(expanded_key[i - 4], expanded_key[i - 1], expanded_key[i]);
+            XorWords(&expanded_key[i - 4], &expanded_key[i - 1], &expanded_key[i]);
         }
     }
     return expanded_key;
 }
-void RotWord(uint8_t* word) {
+
+void RotWord(uint32_t* word) {
 
     uint8_t temp;
 
-    temp = word[0];
-    word[0] = word[1];
-    word[1] = word[2];
-    word[2] = word[3];
-    word[3] = temp;
+    temp = BYTE(*word, 0);
+    BYTE(*word, 0) = BYTE(*word, 1);
+    BYTE(*word, 1) = BYTE(*word, 2);
+    BYTE(*word, 2) = BYTE(*word, 3);
+    BYTE(*word, 3) = temp;
 }
-void SubWord(uint8_t* word, uint8_t* word_out) {
+
+void SubWord(uint32_t* word, uint32_t* word_out) {
 
     for (uint8_t j = 0; j < BLOCK_DIM; j++) {
-        word_out[j] = sbox[word[j]];
+        BYTE(*word_out, j) = sbox[BYTE(*word, j)];
     }
 }
-void XorWords(uint8_t* word1, uint8_t* word2, uint8_t* word_out) {
+
+void XorWords(uint32_t* word1, uint32_t* word2, uint32_t* word_out) {
 
     for (uint8_t i = 0; i < BLOCK_DIM; i++) {
-        word_out[i] = word1[i] ^ word2[i];
+        BYTE(*word_out, i) = BYTE(*word1, i) ^ BYTE(*word2, i);
     }
 }
 
-uint8_t** Cipher(uint8_t** state, uint8_t** round_keys) {
+uint32_t* Cipher(uint32_t* state, uint32_t* round_keys) {
 
     state = AddRoundKey(state, round_keys, 0);
 
@@ -282,7 +277,7 @@ uint8_t** Cipher(uint8_t** state, uint8_t** round_keys) {
     return state;
 }
 
-uint8_t** InvCipher(uint8_t** state, uint8_t** round_keys) {
+uint32_t* InvCipher(uint32_t* state, uint32_t* round_keys) {
 
     state = AddRoundKey(state, round_keys, ROUNDS_NUM);
 
@@ -299,18 +294,18 @@ uint8_t** InvCipher(uint8_t** state, uint8_t** round_keys) {
     return state;
 }
 
-uint8_t** KeyToMatrix(uint8_t key[KEY_LEN]) {
+uint32_t* KeyToMatrix(uint8_t key[KEY_LEN]) {
 
-    uint8_t** key_matrix = NULL;
+    uint32_t* key_matrix = NULL;
 
-    key_matrix = AllocUint8_tArray2(BLOCK_DIM, WORDS_NUM);
+    key_matrix = AllocWords(WORDS_NUM);
 
     for (uint8_t i = 0, j = 0, k = 0; i < KEY_LEN; i++, k++) {
         if (k > BLOCK_DIM - 1) {
             k = 0;
             j++;
         }
-        key_matrix[j][k] = key[i];
+        BYTE(key_matrix[j], k) = key[i];
     }
     return key_matrix;
 }
